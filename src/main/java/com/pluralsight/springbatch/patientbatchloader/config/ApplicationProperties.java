@@ -19,7 +19,7 @@ public class ApplicationProperties {
 
     }
 
-    private static class Batch {
+    public static class Batch {
 
         private String inputPath = "/Users/brucephillips/git/patient-batch-loader/data";
 
