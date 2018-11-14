@@ -30,6 +30,10 @@ import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.file.LineMapper;
 import org.springframework.batch.item.support.PassThroughItemProcessor;
 import org.springframework.batch.item.ItemWriter;
+import com.pluralsight.springbatch.patientbatchloader.domain.PatientEntity;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.function.Function;
 
 
 
@@ -105,12 +109,13 @@ public class BatchJobConfiguration {
     }
 
     @Bean
-    public Step step(ItemReader<PatientRecord> itemReader) throws Exception {
+    public Step step(ItemReader<PatientRecord> itemReader,
+                     Function<PatientRecord, PatientEntity> processor) throws Exception {
         return this.stepBuilderFactory
             .get(Constants.STEP_NAME)
-            .<PatientRecord, PatientRecord>chunk(2)
+            .<PatientRecord, PatientEntity>chunk(2)
             .reader(itemReader)
-            .processor(processor())
+            .processor(processor)
             .writer(writer())
             .build();
     }
@@ -130,22 +135,38 @@ public class BatchJobConfiguration {
         return mapper;
     }
 
+
+
     @Bean
     @StepScope
-    public PassThroughItemProcessor<PatientRecord> processor() {
-        return new PassThroughItemProcessor<>();
+    public ItemWriter<PatientEntity> writer() {
+        return new ItemWriter<PatientEntity>() {
+            @Override
+            public void write(List<? extends PatientEntity> items) throws Exception {
+                for (PatientEntity patientEntity : items) {
+                    System.err.println("Writing item: " + patientEntity.toString());
+                }
+            }
+        };
     }
 
     @Bean
     @StepScope
-    public ItemWriter<PatientRecord> writer() {
-        return new ItemWriter<PatientRecord>() {
-            @Override
-            public void write(List<? extends PatientRecord> items) throws Exception {
-                for (PatientRecord patientRecord : items) {
-                    System.err.println("Writing item: " + patientRecord.toString());
-                }
-            }
+    public Function<PatientRecord, PatientEntity> processor() {
+        return (patientRecord) ->  {
+            return new PatientEntity(
+                patientRecord.getSourceId(),
+                patientRecord.getFirstName(),
+                patientRecord.getMiddleInitial(),
+                patientRecord.getLastName(),
+                patientRecord.getEmailAddress(),
+                patientRecord.getPhoneNumber(),
+                patientRecord.getStreet(),
+                patientRecord.getCity(),
+                patientRecord.getState(),
+                patientRecord.getZip(),
+                LocalDate.parse(patientRecord.getBirthDate(), DateTimeFormatter.ofPattern("M/dd/yyyy")),
+                patientRecord.getSsn());
         };
     }
 
